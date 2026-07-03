@@ -1,7 +1,7 @@
 ---
 title: "Weather App TS Architecture and Project Structure"
 sidebarTitle: "Overview"
-description: "Explore the component tree, directory layout, and key design decisions behind Weather App TS, including how React Context and custom hooks separate concerns."
+description: "Explore the component tree, directory layout, and design decisions of Weather App TS, including how React Context and custom hooks separate concerns."
 ---
 
 Weather App TS is a single-page React application written in TypeScript and styled with Tailwind CSS. All shared state lives in a single `WeatherContext` provider that is mounted at the application root, so every component in the tree can read city selection, loading state, and transformed weather data without prop-drilling. Data fetching is delegated to two custom hooks — `useWeather` and `useGeocoding` — while a third hook, `useWeatherTheme`, handles automatic day/night theming. Utility functions in `src/utils/` handle date formatting, weather-code classification, cloud-coverage labelling, and the hour-level day/night calculation that enriches each hourly forecast card.

@@ -112,7 +112,7 @@ The top-level object returned by the Open-Meteo forecast endpoint. This is the t
   IANA timezone identifier for the location (e.g., `"America/New_York"`). Returned when `timezone=auto` is passed to the API.
 </ResponseField>
 
-<ResponseField name="current_units" type="Record<string, string>">
+<ResponseField name="current_units" type="Record<any, string>">
   Map of each requested current-weather variable name to its unit string. For example: `{ "temperature_2m": "°C", "wind_speed_10m": "km/h", "relative_humidity_2m": "%" }`. The app reads these values directly to render unit labels without hardcoding.
 </ResponseField>
 
@@ -120,7 +120,7 @@ The top-level object returned by the Open-Meteo forecast endpoint. This is the t
   The current-conditions snapshot. See [CurrentWeatherResponse](#currentweatherresponse).
 </ResponseField>
 
-<ResponseField name="hourly_units" type="Record<string, string>">
+<ResponseField name="hourly_units" type="Record<any, string>">
   Map of each requested hourly variable name to its unit string.
 </ResponseField>
 
@@ -128,7 +128,7 @@ The top-level object returned by the Open-Meteo forecast endpoint. This is the t
   The hourly forecast arrays. See [HourlyWeatherResponse](#hourlyweatherresponse).
 </ResponseField>
 
-<ResponseField name="daily_units" type="Record<string, string>">
+<ResponseField name="daily_units" type="Record<any, string>">
   Map of each requested daily variable name to its unit string.
 </ResponseField>
 

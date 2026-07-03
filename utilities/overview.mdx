@@ -1,7 +1,7 @@
 ---
-title: "Utility Functions: Formatting, Classification, and Weather Codes"
+title: "Utility Functions: Dates, Cloud Cover, and Weather Codes"
 sidebarTitle: "Utilities"
-description: "Weather App TS includes four pure utility functions for date formatting, day/night detection, cloud coverage classification, and WMO weather code resolution."
+description: "Weather App TS includes four pure utility functions for date formatting, day/night detection, cloud coverage classification, and weather code resolution."
 ---
 
 Weather App TS ships four pure utility functions — `formatDate`, `isDayTime`, `getCloudCoverage`, and `getWeatherIcon` — that handle all data transformation logic outside of components and hooks. Keeping this logic in standalone modules makes each function independently testable, prevents business rules from leaking into JSX, and lets components stay focused on rendering. None of these functions produce side effects or depend on React state.
@@ -16,7 +16,7 @@ Weather App TS ships four pure utility functions — `formatDate`, `isDayTime`, 
 function formatDate(isoDate: string): {
   fullDate: string;
   shortDate: string;
-  hourOnly: string;
+  hourOnly: string | undefined;
 }
 ```
 

@@ -1,7 +1,7 @@
 ---
-title: "WeatherLoading and WeatherError Status Components"
+title: "WeatherLoading and WeatherError: App Status Components"
 sidebarTitle: "WeatherStatus"
-description: "WeatherStatus exports two overlay components — WeatherLoading shows an animated spinner and WeatherError displays an error message when weather data is unavailable."
+description: "WeatherStatus exports WeatherLoading, an animated spinner overlay, and WeatherError, an error panel shown when weather data cannot be retrieved."
 ---
 
 `WeatherStatus.tsx` exports two full-screen overlay utility components used by `App.tsx` to communicate application state to the user before weather data is available. Both components are rendered with `position: absolute` covering the entire viewport (`absolute inset-0`) so they appear centered over the app shell rather than shifting the layout. `WeatherLoading` is shown while an API request is in flight, and `WeatherError` is shown when a request has completed but resulted in an error.

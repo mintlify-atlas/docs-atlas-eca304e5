@@ -1,5 +1,5 @@
 ---
-title: "Data Flow: From City Search to Rendered Weather"
+title: "Data Flow: From City Search to Rendered Weather UI"
 sidebarTitle: "Data Flow"
 description: "Trace how Weather App TS moves from user input through geocoding, coordinate lookup, API fetch, and data transformation to the final rendered UI."
 ---
@@ -22,7 +22,7 @@ Every user interaction in Weather App TS follows the same pipeline: a keystroke 
     The response is a `GeocodingResponse` containing up to ten `Place` objects, each with a name, country, country code, and coordinates. The result is stored as `cities` in the context and displayed as a dropdown in `WeatherNav`.
   </Step>
   <Step title="City selection">
-    The user clicks a result in the dropdown. `WeatherNav` attaches the selection handler via `onMouseDown` rather than `onClick` so that the event fires before the input's `onBlur` event closes the dropdown. Calling `handleSelect(city)` inside `WeatherContext` sets `selectedCity` to the chosen `Place` and simultaneously writes it to `localStorage` via the companion `useEffect`.
+    The user clicks a result in the dropdown. `WeatherNav` attaches the selection handler via `onMouseDown` rather than `onClick` so that the event fires before the input's `onBlur` event closes the dropdown. Calling `handleSelect(city)` inside `WeatherContext` calls `setSelectedCity(city)`, which updates state. A companion `useEffect` that watches `selectedCity` then serialises the new value to `localStorage` automatically.
   </Step>
   <Step title="Coordinate extraction">
     A `useMemo` inside `WeatherProvider` derives a `coords` object from `selectedCity`. If the city is `null`, both values are `null` and the weather hook skips the fetch:

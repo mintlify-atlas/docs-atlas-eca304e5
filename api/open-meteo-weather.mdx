@@ -76,11 +76,11 @@ The API returns a single JSON object. The app maps this directly to the `Weather
 type WeatherResponse = {
   utc_offset_seconds: number;               // UTC offset for the location
   timezone: string;                         // IANA timezone string
-  current_units: Record<string, string>;    // unit labels for current fields
+  current_units: Record<any, string>;       // unit labels for current fields
   current: CurrentWeatherResponse;
-  hourly_units: Record<string, string>;     // unit labels for hourly fields
+  hourly_units: Record<any, string>;        // unit labels for hourly fields
   hourly: HourlyWeatherResponse;
-  daily_units: Record<string, string>;      // unit labels for daily fields
+  daily_units: Record<any, string>;         // unit labels for daily fields
   daily: DailyWeatherResponse;
 };
 ```
@@ -93,7 +93,7 @@ type WeatherResponse = {
   The IANA timezone identifier for the location (e.g., `"Europe/Berlin"`). Returned when `timezone=auto` is set.
 </ResponseField>
 
-<ResponseField name="current_units" type="Record<string, string>">
+<ResponseField name="current_units" type="Record<any, string>">
   A map of each requested current-weather variable name to its unit string (e.g., `{ "temperature_2m": "°C", "wind_speed_10m": "km/h" }`). The app reads these directly to display unit labels without hardcoding.
 </ResponseField>
 
@@ -101,7 +101,7 @@ type WeatherResponse = {
   Object containing the latest observed weather values. See [Current Weather Fields](#current-weather-fields) below.
 </ResponseField>
 
-<ResponseField name="hourly_units" type="Record<string, string>">
+<ResponseField name="hourly_units" type="Record<any, string>">
   A map of each requested hourly variable name to its unit string.
 </ResponseField>
 
@@ -109,7 +109,7 @@ type WeatherResponse = {
   Object containing parallel arrays of hourly forecast values. See [Hourly Weather Fields](#hourly-weather-fields) below.
 </ResponseField>
 
-<ResponseField name="daily_units" type="Record<string, string>">
+<ResponseField name="daily_units" type="Record<any, string>">
   A map of each requested daily variable name to its unit string.
 </ResponseField>
 

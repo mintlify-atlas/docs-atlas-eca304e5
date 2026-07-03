@@ -1,7 +1,7 @@
 ---
 title: "useWeatherTheme: Automatic Day/Night UI Theme Switching"
 sidebarTitle: "useWeatherTheme"
-description: "useWeatherTheme toggles the 'dark' CSS class on the HTML element based on whether it is currently daytime at the selected location, enabling automatic light/dark theming."
+description: "useWeatherTheme toggles the 'dark' CSS class on the HTML element based on the current day/night status, enabling automatic Tailwind light/dark theming."
 ---
 
 `useWeatherTheme` is a custom React hook that bridges live weather data to the application's visual theme. It accepts the `is_day` boolean returned by the Open-Meteo API and uses it to add or remove the `dark` class on the root `<html>` element. Because Tailwind CSS's dark-mode variant is configured to respond to that class, every component in the app automatically switches between its light and dark styles the moment the weather data updates — no user interaction required.
