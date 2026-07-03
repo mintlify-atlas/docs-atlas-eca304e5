@@ -1,20 +1,58 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "Weather App TS: Real-Time Global Weather with React"
+sidebarTitle: "Home"
+description: "A global real-time weather app built with React, TypeScript, and Tailwind CSS. Displays current conditions, hourly forecasts, and 7-day outlooks via the Open-Meteo API."
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+Weather App TS is a React application that delivers live weather data for any city in the world — no API key required. It fetches current conditions, the next 7 hours of hourly forecasts, and a 7-day daily outlook directly from the free [Open-Meteo API](https://open-meteo.com/). The UI automatically switches between light and dark themes based on whether it is currently day or night at the selected location.
 
-<Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
-</Tip>
+<CardGroup cols={2}>
+  <Card title="Introduction" icon="cloud-sun" href="/introduction">
+    Learn what Weather App TS does, how it's structured, and the technology choices behind it.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Clone the repo, install dependencies, and run the app locally in under five minutes.
+  </Card>
+  <Card title="Architecture" icon="diagram-project" href="/architecture/overview">
+    Understand the component tree, data flow, and how the React Context ties everything together.
+  </Card>
+  <Card title="Components" icon="puzzle-piece" href="/components/weather-nav">
+    Explore every UI component — props, behaviour, and rendered output documented in detail.
+  </Card>
+  <Card title="Hooks & Utilities" icon="code" href="/hooks/use-weather">
+    Deep-dive into the custom hooks and pure utility functions that power data fetching and formatting.
+  </Card>
+  <Card title="API Integration" icon="plug" href="/api/open-meteo-weather">
+    See exactly how the app calls the Open-Meteo Weather and Geocoding APIs, with full type references.
+  </Card>
+</CardGroup>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+## What the app does
+
+<Steps>
+  <Step title="Search for a city">
+    Type at least two characters into the search bar. The app debounces your input and queries the Open-Meteo Geocoding API, showing a list of matching cities.
+  </Step>
+  <Step title="Select a location">
+    Click a city from the dropdown. The selection is persisted to `localStorage` so the same city loads on your next visit.
+  </Step>
+  <Step title="View current conditions">
+    The main panel shows the current temperature, feels-like temperature, humidity, wind speed, and cloud coverage for the selected city.
+  </Step>
+  <Step title="Explore forecasts">
+    Scroll to the hourly and daily sections to see the next 7 hours and the next 7 days of weather predictions, each with an icon that adapts to day or night.
+  </Step>
+</Steps>
+
+## Tech stack
+
+| Technology | Role |
+|---|---|
+| React 19 | UI rendering and component model |
+| TypeScript 6 | Static typing for all components, hooks, and API responses |
+| Tailwind CSS 4 | Utility-first styling |
+| Vite 8 | Development server and production bundler |
+| Open-Meteo API | Free, no-key weather and geocoding data |
+| React Context API | Global state management |
+| `localStorage` | Persists the last-selected city |
+| `use-debounce` | Prevents excessive geocoding API calls while typing |

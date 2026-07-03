@@ -1,0 +1,125 @@
+---
+title: "Utility Functions: Formatting, Classification, and Weather Codes"
+sidebarTitle: "Utilities"
+description: "Weather App TS includes four pure utility functions for date formatting, day/night detection, cloud coverage classification, and WMO weather code resolution."
+---
+
+Weather App TS ships four pure utility functions — `formatDate`, `isDayTime`, `getCloudCoverage`, and `getWeatherIcon` — that handle all data transformation logic outside of components and hooks. Keeping this logic in standalone modules makes each function independently testable, prevents business rules from leaking into JSX, and lets components stay focused on rendering. None of these functions produce side effects or depend on React state.
+
+## formatDate(isoDate)
+
+`formatDate` takes an ISO 8601 datetime string (as returned by the Open-Meteo API) and produces three pre-formatted string representations suited to different parts of the UI.
+
+**Signature**
+
+```typescript
+function formatDate(isoDate: string): {
+  fullDate: string;
+  shortDate: string;
+  hourOnly: string;
+}
+```
+
+The function splits the input on `"T"` to separate the date and time portions, constructs a `Date` object from the date part, and formats it via `Intl.DateTimeFormat` with the `en-US` locale. The time portion is sliced to extract the `HH:MM` segment directly from the original string, so no timezone conversion is applied to the hour value.
+
+Given the input `"2024-07-15T14:30"`, the return value is:
+
+| Field | Example Output |
+|-------|----------------|
+| `fullDate` | `"Jul 15, 2024"` |
+| `shortDate` | `"Mon, Jul 15"` |
+| `hourOnly` | `"14:30"` |
+
+`fullDate` is formatted with `{ month: 'short', day: 'numeric', year: 'numeric' }` and is used wherever a complete, unambiguous date is needed. `shortDate` uses `{ weekday: 'short', month: 'short', day: 'numeric' }` and appears in the daily forecast cards. `hourOnly` is used for hourly forecast labels.
+
+## isDayTime(currentDate, sunriseList, sunsetList)
+
+`isDayTime` determines whether a given datetime falls between sunrise and sunset on the same calendar day, using the daily sunrise and sunset arrays from the Open-Meteo forecast response.
+
+**Signature**
+
+```typescript
+function isDayTime(
+  currentDate: string,
+  sunriseList: string[],
+  sunsetList: string[]
+): boolean
+```
+
+The function locates the correct entry in `sunriseList` by comparing the first ten characters of each element (`YYYY-MM-DD`) against the first ten characters of `currentDate`. Once the index is found, it extracts the `HH:MM` portion (characters 11–15) from `currentDate`, the matching sunrise entry, and the matching sunset entry. It then performs a string-lexicographic comparison — valid for zero-padded 24-hour time strings — and returns `true` if the current hour falls within `[sunriseHour, sunsetHour)`. The function returns `false` if the date cannot be found in the sunrise list.
+
+```typescript
+const isDay = isDayTime(
+  "2024-07-15T14:30",
+  ["2024-07-15T05:12"],  // sunrise
+  ["2024-07-15T21:08"]   // sunset
+);
+// returns true
+```
+
+## getCloudCoverage(cloudCover)
+
+`getCloudCoverage` maps a numeric cloud cover percentage (as returned in the `cloud_cover` field of the Open-Meteo current weather block) to a human-readable description.
+
+**Signature**
+
+```typescript
+function getCloudCoverage(cloudCover: number): string
+```
+
+The function applies a series of threshold checks and returns one of four fixed string labels:
+
+| `cloudCover` Range | Return Value |
+|--------------------|--------------|
+| 0 – 20 | `"Clear"` |
+| 21 – 50 | `"Partly Cloudy"` |
+| 51 – 80 | `"Mostly Cloudy"` |
+| 81 – 100 | `"Overcast"` |
+
+## getWeatherIcon(code, isDay) and weatherCodes
+
+`getWeatherIcon` resolves a WMO weather interpretation code to a Lucide React icon component and a text label, with day/night variants for clear and partly-cloudy conditions.
+
+**Signature**
+
+```typescript
+function getWeatherIcon(
+  code: number,
+  isDay: boolean
+): { icon: LucideIcon; label: string }
+```
+
+The function looks up `code` in the `weatherCodes` record. If `isDay` is `true`, it returns the entry's `icon` property (the daytime icon). If `isDay` is `false`, it returns `iconNight` when available, falling back to the daytime `icon` for codes that have no distinct night variant. If `code` is not present in the record at all, the function falls back to the Overcast entry (code `3`) to ensure a valid icon is always returned.
+
+The full set of supported WMO codes and their night-icon availability is:
+
+| Code | Label | Has Night Icon |
+|------|-------|----------------|
+| 0 | Clear sky | ✓ (Moon) |
+| 1 | Mainly clear | ✓ (CloudMoon) |
+| 2 | Partly cloudy | ✓ (CloudMoon) |
+| 3 | Overcast | — |
+| 45 | Fog | — |
+| 48 | Depositing rime fog | — |
+| 51 | Light drizzle | — |
+| 53 | Moderate drizzle | — |
+| 55 | Dense drizzle | — |
+| 56 | Light freezing drizzle | — |
+| 57 | Dense freezing drizzle | — |
+| 61 | Slight rain | — |
+| 63 | Moderate rain | — |
+| 65 | Heavy rain | — |
+| 66 | Freezing rain | — |
+| 67 | Heavy freezing rain | — |
+| 71 | Slight snow fall | — |
+| 73 | Moderate snow fall | — |
+| 75 | Heavy snow fall | — |
+| 77 | Snow grains | — |
+| 80 | Slight rain showers | — |
+| 81 | Moderate rain showers | — |
+| 82 | Violent rain showers | — |
+| 85 | Slight snow showers | — |
+| 86 | Heavy snow showers | — |
+| 95 | Thunderstorm | — |
+| 96 | Thunderstorm with slight hail | — |
+| 99 | Thunderstorm with heavy hail | — |

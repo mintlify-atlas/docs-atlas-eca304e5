@@ -1,0 +1,55 @@
+---
+title: "useWeatherTheme: Automatic Day/Night UI Theme Switching"
+sidebarTitle: "useWeatherTheme"
+description: "useWeatherTheme toggles the 'dark' CSS class on the HTML element based on whether it is currently daytime at the selected location, enabling automatic light/dark theming."
+---
+
+`useWeatherTheme` is a custom React hook that bridges live weather data to the application's visual theme. It accepts the `is_day` boolean returned by the Open-Meteo API and uses it to add or remove the `dark` class on the root `<html>` element. Because Tailwind CSS's dark-mode variant is configured to respond to that class, every component in the app automatically switches between its light and dark styles the moment the weather data updates — no user interaction required.
+
+## Signature
+
+```typescript
+function useWeatherTheme(isDay: boolean | undefined): void
+```
+
+## Parameters
+
+<ParamField path="isDay" type="boolean | undefined" required>
+  Whether it is currently daytime at the selected location, sourced from the `is_day` field of the Open-Meteo current weather response. When `undefined` (i.e., before weather data has loaded), the hook takes no action and leaves the existing theme class intact. When `false`, the `dark` class is added to `<html>`; when `true`, it is removed.
+</ParamField>
+
+## How It Works
+
+The Open-Meteo API includes an `is_day` field in its `current` weather block. This value is determined server-side based on the location's solar position at the time of the request — no sunrise/sunset arithmetic is needed on the client.
+
+`useWeatherTheme` passes that value to `document.documentElement.classList.toggle('dark', !isDay)`, which is the standard Tailwind CSS mechanism for enabling class-based dark mode. When `isDay` is `true` the toggle removes `dark`; when `false` it adds it. The entire update runs inside a `useEffect` that re-fires whenever `isDay` changes:
+
+```typescript
+export function useWeatherTheme(isDay: boolean | undefined) {
+  useEffect(() => {
+    if (isDay === undefined) return;
+    const html = document.documentElement;
+    html.classList.toggle('dark', !isDay);
+  }, [isDay]);
+}
+```
+
+The flow through the application is:
+
+1. `useWeather` fetches forecast data and returns `weather.current.is_day`.
+2. `App.tsx` reads `is_day` and passes it to `useWeatherTheme`.
+3. `useWeatherTheme` updates the `dark` class on `<html>`.
+4. Tailwind's `dark:` utilities apply the appropriate color tokens across all components.
+
+## Usage in App.tsx
+
+```typescript
+const isDay = currentWeather?.is_day;
+useWeatherTheme(isDay);
+```
+
+`currentWeather` is `undefined` until the first fetch completes, so `isDay` starts as `undefined` and the hook safely does nothing — the app renders with whatever theme class is already on `<html>` (typically none, which means light mode) until real data arrives.
+
+<Note>
+  The theme switches immediately whenever the user selects a new city. If the newly selected city is currently experiencing nighttime, the UI transitions to dark mode as soon as the API response arrives — without any page reload or manual toggle.
+</Note>

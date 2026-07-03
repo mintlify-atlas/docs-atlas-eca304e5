@@ -1,0 +1,106 @@
+---
+title: "WeatherNav: City Search and Location Header Component"
+sidebarTitle: "WeatherNav"
+description: "WeatherNav displays the current city, date, time, and weather icon, and provides a debounced city search input with a dropdown of geocoding results."
+---
+
+`WeatherNav` is the top-level header component of the weather application. It occupies the top of the left column in the two-column layout and serves two purposes at once: it presents the currently selected city alongside its local date, time, and a contextual weather icon, and it provides a search bar that lets users switch to a different city. When the user types into the search field, a dropdown of matching geocoding results appears beneath the input — selecting a result updates the app-wide city context and triggers a fresh weather fetch.
+
+## Props
+
+`WeatherNav` accepts five props defined by the `WeatherNavProps` type in `src/types/weather.ts`.
+
+<ParamField path="city" type="string" default="'Unknown'">
+  The display name of the currently selected city. In App.tsx this is composed as a template literal — `${city?.name}, ${city?.country_code}` — e.g. `"Berlin, DE"`.
+</ParamField>
+
+<ParamField path="code" type="number" default="0">
+  The WMO weather code for the current conditions. Passed to `getWeatherIcon(code, isDay)` to select the appropriate Lucide icon and its accessible label.
+</ParamField>
+
+<ParamField path="date" type="string" default="'Unknown'">
+  A formatted full date string such as `"Jan 6, 2025"`. Produced by `formatDate(currentWeather.time).fullDate` in App.tsx.
+</ParamField>
+
+<ParamField path="hour" type="string" default="'00:00'">
+  A 24-hour time string such as `"14:30"`. Produced by `formatDate(currentWeather.time).hourOnly` in App.tsx.
+</ParamField>
+
+<ParamField path="isDay" type="boolean" default="true">
+  Whether it is currently daytime at the selected location. Controls which icon variant is shown — for example, `Sun` during the day vs `Moon` at night for clear-sky conditions.
+</ParamField>
+
+## Context Dependencies
+
+`WeatherNav` calls `useWeatherContext()` internally to read five values:
+
+| Value | Type | Purpose |
+|-------|------|---------|
+| `search` | `string` | The current value of the city search input |
+| `setSearch` | `Dispatch<SetStateAction<string>>` | Updates the search string as the user types |
+| `cities` | `GeocodingResponse \| null` | The geocoding API response containing matching `Place` results |
+| `handleSelect` | `(city: Place) => void` | Sets the selected city and clears the search when a result is chosen |
+| `loading` | `boolean` | Indicates a pending geocoding or weather request |
+
+These values come from context rather than props because city search is a piece of global, app-wide state. Multiple parts of the application respond when the selected city changes — the weather hook re-fetches, the theme updates, and all forecast panels re-render. Hoisting this state into `WeatherContext` via `WeatherProvider` avoids prop-drilling through the component tree and keeps `WeatherNav`'s own prop surface focused solely on display data.
+
+The search string is debounced at 300 ms inside `WeatherContext` before being passed to the geocoding hook, so `WeatherNav` itself never needs to manage debounce timers.
+
+## CityResults Sub-component
+
+`CityResults` is a named export from `WeatherNav.tsx` that renders the autocomplete dropdown beneath the search input.
+
+```typescript
+export function CityResults({
+  results,
+  handleSelect,
+}: {
+  results: Place[];
+  handleSelect: (city: Place) => void;
+}) { ... }
+```
+
+<ParamField path="results" type="Place[]" required>
+  The array of geocoding results to display. Each `Place` has `id`, `name`, `country`, `country_code`, `latitude`, and `longitude` fields. If the array is empty or falsy the component returns `null` immediately, rendering nothing.
+</ParamField>
+
+<ParamField path="handleSelect" type="(city: Place) => void" required>
+  Callback invoked when the user clicks a result. Propagated down from the parent `WeatherNav`, which receives it from `useWeatherContext()`.
+</ParamField>
+
+Each result row is rendered as a `<li>` element that includes a `MapIcon` alongside the country name and city name. The list is positioned absolutely beneath the search input using Tailwind's `absolute left-0 right-0 top-10` classes.
+
+**Why `onMouseDown` instead of `onClick`?**
+The search input has an `onBlur` handler that sets `inputActive` to `false`, which hides the dropdown. Because `blur` fires before `click`, a plain `onClick` on a result row would never execute — the dropdown would disappear first. Using `onMouseDown` fires synchronously before the blur event, ensuring the selection is registered before `inputActive` becomes `false`.
+
+## Search Visibility Logic
+
+`WeatherNav` uses a single boolean flag to decide whether to render `CityResults`:
+
+```typescript
+const showResults = inputActive && search.length > 1 && !!cities?.results?.length;
+```
+
+Each condition serves a distinct role:
+
+- **`inputActive`** — `true` only while the search `<input>` has focus. When the user tabs or clicks away, `onBlur` sets this to `false` and the dropdown is hidden immediately, even if results are still available.
+- **`search.length > 1`** — The geocoding API requires at least two characters to return meaningful results. Suppressing the dropdown for single-character queries avoids a flash of empty or irrelevant results.
+- **`!!cities?.results?.length`** — Guards against rendering the list while the geocoding request is in-flight or when no matches were found. Optional chaining handles the case where `cities` is still `null`.
+
+All three conditions must be `true` simultaneously for `CityResults` to appear.
+
+## Usage Example
+
+`App.tsx` renders `WeatherNav` at the top of the left column, passing live values derived from the weather context:
+
+```tsx
+<WeatherNav
+  city={`${city?.name}, ${city?.country_code}`}
+  date={date!.fullDate}
+  hour={date!.hourOnly}
+  code={currentWeather!.weather_code}
+  isDay={currentWeather!.is_day}
+/>
+```
+
+`date` is computed just before the JSX return using `formatDate(currentWeather.time)`, which splits the ISO datetime string and uses `Intl.DateTimeFormat` to produce locale-friendly representations. The non-null assertions (`!`) are safe here because `WeatherNav` is only rendered inside the `!loading && !!weather` branch of `App.tsx`.

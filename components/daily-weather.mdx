@@ -1,0 +1,78 @@
+---
+title: "DailyWeather: 7-Day Forecast Component"
+sidebarTitle: "DailyWeather"
+description: "DailyWeather renders a 7-day forecast list with date, weather icon, and high/low temperatures. The first entry always displays as Today."
+---
+
+`DailyWeather` presents the extended seven-day forecast in a stacked vertical list below the `HourlyWeather` panel in the right column. Each row in the list shows a date label, a weather condition icon, and the day's high and low temperatures side by side. The component is deliberately compact — rows are lightweight grid items rather than large cards — so that all seven forecast days fit within the panel without scrolling on typical screen sizes.
+
+## Props
+
+<ParamField path="weatherList" type="DailyWeather[]" required>
+  An array of up to seven daily forecast items. Each item conforms to the `DailyWeather` type defined in `src/types/weather.ts`.
+</ParamField>
+
+### DailyWeather Item Shape
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `time` | `string` | ISO date string in `YYYY-MM-DD` format representing the forecast day |
+| `code` | `number` | WMO weather interpretation code used to select the condition icon and its accessible label |
+| `temp_max` | `number` | Maximum (high) temperature in °C for the day. `Math.floor()` is applied before rendering |
+| `temp_min` | `number` | Minimum (low) temperature in °C for the day. `Math.floor()` is applied before rendering |
+
+## DailyCard Sub-component
+
+`DailyCard` is an internal sub-component defined inside `DailyWeather.tsx` that renders a single forecast row. It is not exported.
+
+<ParamField path="time" type="string" default="'00:00'">
+  The date label displayed in the left column of the row. The parent `DailyWeather` component passes `"Today"` for index `0` and a short formatted date string (e.g. `"Mon, Jan 6"`) for all subsequent entries.
+</ParamField>
+
+<ParamField path="code" type="number" default="0">
+  WMO weather code passed to `getWeatherIcon(code, true)`. The icon is always requested in day mode — see the note below on why `isDay` is hardcoded to `true` for daily forecasts.
+</ParamField>
+
+<ParamField path="temp_max" type="number" default="0">
+  High temperature for the day in °C. Rendered in the default text color with a degree symbol appended.
+</ParamField>
+
+<ParamField path="temp_min" type="number" default="0">
+  Low temperature for the day in °C. Rendered in the `text-accent` color class to visually distinguish it from the high temperature.
+</ParamField>
+
+Each card is laid out as a three-column grid: the date label on the left, the weather icon in the center, and a two-cell sub-grid on the right holding the max and min temperatures. The card's `title` attribute is set to `Icon.label` (the WMO code's human-readable description) for accessibility.
+
+**Why is `isDay` always `true`?**
+Daily forecasts represent an entire 24-hour period rather than a specific hour. Using the daytime icon variant for every row gives a consistent, sun-oriented visual language across all seven days, regardless of the user's local time or whether the current day happens to be night.
+
+## "Today" Label
+
+`DailyWeather` maps over `weatherList` with an index. The first entry (index `0`) always corresponds to the current calendar day, so its label is replaced with the literal string `"Today"`:
+
+```tsx
+time={index === 0 ? "Today" : formatDate(item.time).shortDate}
+```
+
+All subsequent entries use `formatDate(item.time).shortDate`, which formats the ISO date string with `Intl.DateTimeFormat` using `{ weekday: 'short', month: 'short', day: 'numeric' }`, producing labels such as `"Tue, Jan 7"` or `"Sat, Jan 11"`.
+
+## Temperature Display
+
+Both `temp_max` and `temp_min` are passed through `Math.floor()` in the parent's `map` call before being handed to `DailyCard`, ensuring whole-number display with no decimal places:
+
+```tsx
+temp_max={Math.floor(item.temp_max)}
+temp_min={Math.floor(item.temp_min)}
+```
+
+Inside `DailyCard`, the two values are placed in adjacent cells of a two-column sub-grid. The high temperature uses the default `text-text-primary` color, while the low temperature carries the `text-accent` class to provide a subtle visual distinction between the two values at a glance.
+
+## Usage Example
+
+`App.tsx` passes the `dailyWeather` array from context directly to the component:
+
+```tsx
+<DailyWeather weatherList={dailyWeather} />
+```
+
+The `dailyWeather` array is built in `WeatherContext` via a `useMemo` that maps over `weather.daily.time` and zips together the corresponding `weather_code`, `temperature_2m_max`, and `temperature_2m_min` arrays, then filters to a maximum of seven entries with `.filter((_, index) => index < 7)`.

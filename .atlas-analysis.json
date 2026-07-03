@@ -1,0 +1,60 @@
+{
+  "projectType": "frontend",
+  "projectName": "Weather App TS",
+  "projectDescription": "A global real-time weather application built with React, TypeScript, and Tailwind CSS that displays current conditions, hourly forecasts, and 7-day daily forecasts sourced from the Open-Meteo API.",
+  "theme": "palm",
+  "primaryColor": "#3B82F6",
+  "lightColor": "#EFF6FF",
+  "darkColor": "#1E3A5F",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Architecture",
+            "pages": ["architecture/overview", "architecture/weather-context", "architecture/data-flow"]
+          },
+          {
+            "group": "Components",
+            "pages": ["components/weather-nav", "components/current-weather", "components/hourly-weather", "components/daily-weather", "components/weather-status"]
+          },
+          {
+            "group": "Hooks & Utilities",
+            "pages": ["hooks/use-weather", "hooks/use-geocoding", "hooks/use-weather-theme", "utilities/overview"]
+          },
+          {
+            "group": "API Integration",
+            "pages": ["api/open-meteo-weather", "api/open-meteo-geocoding", "api/types-reference"]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Global city search with debounced autocomplete via Open-Meteo Geocoding API",
+    "Real-time current weather: temperature, feels-like, humidity, wind speed, and cloud coverage",
+    "Hourly weather forecast for the next 7 hours from the current time",
+    "7-day daily forecast with high/low temperatures and weather icons",
+    "Dynamic day/night theme that switches the UI based on the selected location's solar time",
+    "Persistent city preference stored in localStorage across sessions",
+    "WMO weather code mapping to descriptive labels and Lucide React icons with day/night variants",
+    "Fully typed with TypeScript — all API responses and UI props are strictly typed"
+  ],
+  "publicApiSurface": [
+    "useWeatherContext() — React hook to consume the global WeatherContext",
+    "WeatherProvider — React context provider wrapping the entire app",
+    "useWeather({ latitude, longitude }) — hook fetching current/hourly/daily forecast",
+    "useGeocoding(city: string) — hook fetching city search results",
+    "useWeatherTheme(isDay: boolean | undefined) — hook toggling dark mode class",
+    "getWeatherIcon(code: number, isDay: boolean) — maps WMO code to Lucide icon + label",
+    "getCloudCoverage(cloudCover: number) — converts cloud % to readable string",
+    "formatDate(isoDate: string) — parses ISO date into fullDate / shortDate / hourOnly",
+    "isDayTime(currentDate, sunriseList, sunsetList) — determines day/night from solar data",
+    "weatherCodes — Record<number, WeatherData> mapping of all supported WMO codes"
+  ]
+}

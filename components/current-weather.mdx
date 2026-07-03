@@ -1,0 +1,101 @@
+---
+title: "CurrentWeather: Live Conditions Display Component"
+sidebarTitle: "CurrentWeather"
+description: "CurrentWeather renders the current temperature, feels-like, humidity, cloud coverage, and wind speed using composable WeatherVarCard sub-components."
+---
+
+`CurrentWeather` is the primary at-a-glance conditions panel, displayed directly below `WeatherNav` in the left column of the app layout. It is split into two visual zones. The upper zone occupies most of the card and shows the current temperature in a large typographic display on the left, with compact "inner" cards for feels-like temperature and relative humidity stacked on the right. The lower zone sits beneath that card and holds two wider "outer" cards — one for cloud coverage described in plain language and one for wind speed with its unit — arranged in a responsive two-column grid on medium screens and stacked on small screens.
+
+## Props
+
+`CurrentWeather` accepts five props defined by the `CurrentWeather` type in `src/types/weather.ts`. All props have sensible defaults so the component renders safely even before data arrives.
+
+<ParamField path="temperature" type="number" default="0">
+  The current air temperature in degrees Celsius at 2 m above the surface. Displayed at a large `text-9xl` scale with a degree symbol. `Math.floor()` is applied before rendering, so no decimal places appear.
+</ParamField>
+
+<ParamField path="wind" type="WeatherVar" default="{ value: 0, unit: 'km/h' }">
+  Wind speed as a `WeatherVar` object containing a numeric `value` and an optional `unit` string (e.g. `"km/h"`). The unit string is sourced from the API response's `current_units` map so it always matches what the server returned.
+</ParamField>
+
+<ParamField path="humidity" type="WeatherVar" default="{ value: 0, unit: '%' }">
+  Relative humidity as a `WeatherVar`. The `unit` is typically `"%"` and is read from `weather.current_units.relative_humidity_2m` in App.tsx.
+</ParamField>
+
+<ParamField path="apparent_temp" type="WeatherVar" default="{ value: 0, unit: '°' }">
+  The feels-like (apparent) temperature as a `WeatherVar`. The `unit` is hardcoded to `"°"` at the call site in App.tsx. `Math.floor()` is applied to the numeric value before display.
+</ParamField>
+
+<ParamField path="cloud_coverage" type="number" default="0">
+  Cloud cover as a percentage from 0 to 100. This raw number is not shown directly; instead it is passed through `getCloudCoverage()`, which converts it to a human-readable label such as `"Partly Cloudy"`. See the [Cloud Coverage Labels](#cloud-coverage-labels) section below.
+</ParamField>
+
+## WeatherVarCard Sub-component
+
+`WeatherVarCard` is an internal sub-component defined inside `CurrentWeather.tsx` that is reused for all four metric cards. Its appearance switches between two layout modes via the `style` prop.
+
+<ParamField path="style" type="'inner' | 'outer'" required>
+  Controls which card template is rendered.
+  - `'inner'` — a compact two-column row with a small icon box on the left and label/value stacked on the right. Used for feels-like and humidity inside the main temperature card.
+  - `'outer'` — a larger, more prominent card with a `size-12` icon spanning two rows and bold value text. Used for cloud coverage and wind in the row below.
+</ParamField>
+
+<ParamField path="icon" type="LucideIcon" required>
+  A Lucide React icon component passed as a value (not JSX). The component instantiates it internally as `const Icon = icon` and renders `<Icon />`. The icons used are `Thermometer`, `Droplet`, `Cloud`, and `Wind`.
+</ParamField>
+
+<ParamField path="title" type="string" required>
+  A short label displayed above the value, e.g. `"Feels like"`, `"Humidity"`, `"Cloud coverage"`, or `"Wind"`.
+</ParamField>
+
+<ParamField path="value" type="number | string" required>
+  The metric value to display. For `apparent_temp` and `temperature`, `Math.floor()` is applied at the call site. For `cloud_coverage`, the raw number has already been converted to a string label before being passed.
+</ParamField>
+
+<ParamField path="unit" type="string">
+  An optional unit suffix appended immediately after `value` with no space, e.g. `"°"`, `"%"`, or `"km/h"`. Omitted for cloud coverage since the label is already a plain-language string.
+</ParamField>
+
+## Cloud Coverage Labels
+
+The `getCloudCoverage` utility in `src/utils/cloudCoverage.ts` converts the raw `cloud_cover` percentage from the API into one of four descriptive labels:
+
+| Range | Label |
+|-------|-------|
+| 0–20% | Clear |
+| 21–50% | Partly Cloudy |
+| 51–80% | Mostly Cloudy |
+| 81–100% | Overcast |
+
+```typescript
+export function getCloudCoverage(cloudCover: number) {
+  if (cloudCover <= 20) return 'Clear';
+  if (cloudCover <= 50) return 'Partly Cloudy';
+  if (cloudCover <= 80) return 'Mostly Cloudy';
+  return 'Overcast';
+}
+```
+
+This label is passed as the `value` prop to the cloud-coverage `WeatherVarCard`, with no `unit` provided, so only the text appears.
+
+## Usage Example
+
+`App.tsx` passes values sourced directly from the Open-Meteo API response through the weather context:
+
+```tsx
+<CurrentWeather
+  temperature={currentWeather!.temperature_2m}
+  apparent_temp={{ value: currentWeather!.apparent_temperature, unit: '°' }}
+  humidity={{
+    value: currentWeather!.relative_humidity_2m,
+    unit: weather.current_units.relative_humidity_2m
+  }}
+  wind={{
+    value: currentWeather!.wind_speed_10m,
+    unit: weather.current_units.wind_speed_10m
+  }}
+  cloud_coverage={currentWeather!.cloud_cover}
+/>
+```
+
+The unit strings for humidity and wind are taken from `weather.current_units` — the units object returned alongside the data by the API — so they automatically reflect any unit system the API is configured to return.

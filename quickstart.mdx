@@ -1,47 +1,82 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Weather App TS in Minutes"
+sidebarTitle: "Quickstart"
+description: "Clone Weather App TS, install dependencies, and run a live weather dashboard locally. Full setup takes under five minutes with Node.js and npm."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+Weather App TS has no backend and requires no API key — all weather and geocoding data is fetched directly from the free [Open-Meteo API](https://open-meteo.com/) at runtime. The only prerequisites are **Node.js 18 or later** and **npm** (or an equivalent package manager such as Yarn or pnpm). Once those are in place you can go from a fresh clone to a running local dashboard in under five minutes.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Clone the repository">
+    Use `git clone` to download the project source and then change into the new directory.
 
     ```bash
-    npm install your-package
+    git clone https://github.com/cristhianblaffita-web/Weather-App-Ts.git
+    cd Weather-App-Ts
     ```
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
-    ```
+  <Step title="Install dependencies">
+    Install all production and development dependencies declared in `package.json`. Choose whichever package manager you prefer.
+
+    <CodeGroup>
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn
+      ```
+
+      ```bash pnpm
+      pnpm install
+      ```
+    </CodeGroup>
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+
+  <Step title="Start the development server">
+    Launch the Vite development server with hot module replacement enabled.
 
     ```bash
-    your-cli start
+    npm run dev
     ```
+
+    Vite will start almost instantly and print a local URL to the terminal. Open [http://localhost:5173](http://localhost:5173) in your browser to see the live dashboard. Any file change you save is reflected in the browser within milliseconds — no manual refresh needed.
+  </Step>
+
+  <Step title="Search for a city">
+    The app loads **Berlin** by default (see [Default City](#default-city) below). To explore weather for a different location, click the search bar in the navigation header and start typing a city name. The debounced autocomplete queries the Open-Meteo Geocoding API after a brief pause and presents a list of matching places. Select any result and the dashboard immediately fetches and renders current conditions, the hourly forecast, and the 7-day daily forecast for that location.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Available Scripts
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
+The four scripts defined in `package.json` cover the full development and deployment lifecycle.
+
+| Script | Command | Description |
+|---|---|---|
+| dev | `npm run dev` | Starts the Vite development server with HMR at `http://localhost:5173` |
+| build | `npm run build` | Type-checks the project with `tsc -b` then bundles it for production output |
+| preview | `npm run preview` | Serves the production build locally to verify the output before deploying |
+| lint | `npm run lint` | Runs ESLint across the entire project to surface code-quality issues |
+
+## Default City
+
+When the application boots for the first time — before any city has ever been selected — `WeatherContext.tsx` falls back to a hardcoded `DEFAULT_CITY` constant that points to Berlin, Germany.
+
+```typescript
+const DEFAULT_CITY: Place = {
+  id: 2950159,
+  name: 'Berlin',
+  latitude: 52.52437,
+  longitude: 13.41053,
+  country_code: 'DE',
+  country: 'Deutschland'
+};
+```
+
+On every subsequent visit the context reads from `localStorage` first. If a `selectedCity` entry is present — written automatically whenever the user picks a city — that stored value takes precedence over `DEFAULT_CITY`, so the dashboard always reopens on the location the user last viewed. If the stored value is missing or cannot be parsed (for example, after clearing browser storage), the application falls back to Berlin seamlessly without throwing an error.
+
+<Tip>
+  Ready to understand how all the pieces fit together? Head over to the [Architecture Overview](/architecture/overview) to explore the data-flow between the Open-Meteo APIs, the React Context layer, custom hooks, and the UI components.
 </Tip>

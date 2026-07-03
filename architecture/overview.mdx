@@ -1,0 +1,79 @@
+---
+title: "Weather App TS Architecture and Project Structure"
+sidebarTitle: "Overview"
+description: "Explore the component tree, directory layout, and key design decisions behind Weather App TS, including how React Context and custom hooks separate concerns."
+---
+
+Weather App TS is a single-page React application written in TypeScript and styled with Tailwind CSS. All shared state lives in a single `WeatherContext` provider that is mounted at the application root, so every component in the tree can read city selection, loading state, and transformed weather data without prop-drilling. Data fetching is delegated to two custom hooks — `useWeather` and `useGeocoding` — while a third hook, `useWeatherTheme`, handles automatic day/night theming. Utility functions in `src/utils/` handle date formatting, weather-code classification, cloud-coverage labelling, and the hour-level day/night calculation that enriches each hourly forecast card.
+
+## Component Tree
+
+The following tree shows how React elements are nested at runtime. `WeatherProvider` wraps the entire application so context is available everywhere beneath it.
+
+```
+main.tsx
+└── WeatherProvider (context)
+    └── App
+        ├── WeatherNav (search + city display)
+        ├── CurrentWeather (temp, humidity, wind, clouds)
+        ├── HourlyWeather (next 7 hours)
+        └── DailyWeather (7-day forecast)
+```
+
+`WeatherNav` owns the search input and the city-name/date header. `CurrentWeather` renders the headline temperature alongside apparent temperature, humidity, wind speed, and cloud coverage. `HourlyWeather` shows a scrollable row of the next seven hours, and `DailyWeather` presents a seven-day outlook beneath it.
+
+## Directory Layout
+
+```
+src/
+├── App.tsx                      # Root component; reads context and renders layout
+├── main.tsx                     # Entry point; mounts WeatherProvider + App
+├── index.css                    # Global Tailwind base styles
+│
+├── components/
+│   ├── CurrentWeather.tsx       # Headline conditions panel
+│   ├── DailyWeather.tsx         # 7-day forecast list
+│   ├── HourlyWeather.tsx        # Next-7-hours carousel
+│   ├── WeatherNav.tsx           # Search bar + city/date header
+│   └── WeatherStatus.tsx        # WeatherLoading and WeatherError display states
+│
+├── context/
+│   └── WeatherContext.tsx       # Global state, city selection, data-fetching orchestration
+│
+├── hooks/
+│   ├── useGeocoding.ts          # Fetches city results from the Open-Meteo geocoding API
+│   ├── useWeather.ts            # Fetches forecast data from the Open-Meteo forecast API
+│   └── useWeatherTheme.ts       # Toggles the `dark` CSS class on <html> based on is_day
+│
+├── types/
+│   ├── api.ts                   # Raw API response types (WeatherResponse, Place, etc.)
+│   └── weather.ts               # UI-level component prop types (HourlyWeather, DailyWeather, etc.)
+│
+└── utils/
+    ├── cloudCoverage.ts         # Maps cloud-cover percentage to a descriptive label
+    ├── formatDate.ts            # Formats ISO timestamps into display strings
+    ├── isDayTime.ts             # Determines day/night for a given hour using sunrise/sunset arrays
+    └── weatherCodes.ts          # Maps WMO weather codes to labels and icon identifiers
+```
+
+## Design Decisions
+
+- **React Context over a state-management library** — the app has a single data domain (one city, one forecast) and a shallow component tree. React Context with `useMemo`-derived values avoids the overhead of Redux or Zustand while keeping the state model easy to trace.
+- **Open-Meteo as the weather API** — Open-Meteo is entirely free, requires no API key, and provides reliable global coverage including current conditions, hourly forecasts, and daily summaries in a single request. This removes the need for environment-variable management or account sign-up for anyone running the project locally.
+- **Debounce on search input** — the search string is passed through `useDebounce` with a 300 ms delay before being forwarded to `useGeocoding`. This prevents a geocoding API call on every keystroke and keeps network traffic minimal without noticeably affecting responsiveness.
+- **localStorage persistence** — when the user selects a city it is serialised to `localStorage` under the key `selectedCity`. On the next visit the stored value is parsed back as the initial state, so the app opens on the last-used city rather than the default.
+- **Automatic day/night theming** — `useWeatherTheme` receives the `is_day` boolean from the current weather response and calls `document.documentElement.classList.toggle('dark', !isDay)`. Tailwind's dark-mode variants then respond to the presence or absence of that class on the `<html>` element, requiring no user interaction to switch themes.
+
+## Explore the Architecture
+
+<CardGroup cols={3}>
+  <Card title="Overview" icon="map" href="/architecture/overview">
+    Component tree, directory layout, and design decisions.
+  </Card>
+  <Card title="Weather Context" icon="database" href="/architecture/weather-context">
+    Global state shape, data transformation, and city persistence.
+  </Card>
+  <Card title="Data Flow" icon="arrow-right-arrow-left" href="/architecture/data-flow">
+    End-to-end trace from search input to rendered weather UI.
+  </Card>
+</CardGroup>

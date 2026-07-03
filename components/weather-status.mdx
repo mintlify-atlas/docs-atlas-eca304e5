@@ -1,0 +1,63 @@
+---
+title: "WeatherLoading and WeatherError Status Components"
+sidebarTitle: "WeatherStatus"
+description: "WeatherStatus exports two overlay components — WeatherLoading shows an animated spinner and WeatherError displays an error message when weather data is unavailable."
+---
+
+`WeatherStatus.tsx` exports two full-screen overlay utility components used by `App.tsx` to communicate application state to the user before weather data is available. Both components are rendered with `position: absolute` covering the entire viewport (`absolute inset-0`) so they appear centered over the app shell rather than shifting the layout. `WeatherLoading` is shown while an API request is in flight, and `WeatherError` is shown when a request has completed but resulted in an error.
+
+## WeatherLoading
+
+`WeatherLoading` accepts no props. It renders a centered card containing an animated CSS spin ring and the text `"Loading weather..."` beneath it.
+
+The spin ring is a `div` styled with `rounded-full border-4 border-accent/30 border-t-accent animate-spin` — a full circle with a muted ring and a single accent-colored arc that rotates continuously via Tailwind's built-in `animate-spin` utility. The surrounding card uses `bg-card-elevated/30` with rounded corners and a subtle shadow, matching the visual language of the rest of the app.
+
+**Usage:**
+
+```tsx
+{loading && <WeatherLoading />}
+```
+
+`WeatherLoading` is rendered whenever `loading` is `true` in `WeatherContext`. Because the component has no props and no internal state, it simply mounts and unmounts as the boolean changes.
+
+## WeatherError
+
+`WeatherError` displays a user-facing error panel with an exclamation icon, a `"Weather unavailable"` heading, and a descriptive message.
+
+<ParamField path="message" type="string" default='"Unable to load weather data"'>
+  An optional human-readable error string. When omitted or `undefined`, the component falls back to the default message `"Unable to load weather data"`. In App.tsx, the `error` string from `WeatherContext` is passed directly — this string originates from the caught exception in the `useWeather` hook, so its content reflects the actual failure reason.
+</ParamField>
+
+The error icon is a small circle with a `!` glyph inside, styled with `bg-accent/10 text-accent` to draw attention without using a harsh red color. The message is rendered in `text-text-secondary` at a smaller size and centered below the heading.
+
+**Usage:**
+
+```tsx
+{!loading && error && <WeatherError message={error} />}
+```
+
+The guard `!loading &&` ensures that the error panel is never shown while a retry or subsequent fetch is already in progress.
+
+## Conditional Rendering Logic
+
+`App.tsx` uses three mutually exclusive rendering branches to handle loading, error, and success states:
+
+```tsx
+{loading && <WeatherLoading />}
+{!loading && error && <WeatherError message={error} />}
+{!loading && !!weather && (
+  // main layout with WeatherNav, CurrentWeather, HourlyWeather, DailyWeather
+)}
+```
+
+These three conditions cover every possible combination of the `loading`, `error`, and `weather` values from `WeatherContext`:
+
+- **Loading** — `loading` is `true`: only `WeatherLoading` renders. The error and success branches are suppressed because `!loading` is `false` in both.
+- **Error** — `loading` is `false` and `error` is a non-empty string: `WeatherLoading` is hidden (its condition is `false`), `WeatherError` renders, and the main layout does not render because `!!weather` is `false` when a fetch fails.
+- **Success** — `loading` is `false`, `error` is `null`, and `weather` holds a valid `WeatherResponse`: both status components are hidden and the full weather layout renders.
+
+This structure means only one of the three branches is ever active at a time, keeping the rendered tree clean and predictable.
+
+<Tip>
+  For a production deployment, consider extending `WeatherError` with a retry button. The `handleSelect` function from `useWeatherContext()` can be called with the currently stored `selectedCity` to re-trigger the weather fetch without requiring the user to search for their city again. Alternatively, expose a `onRetry?: () => void` prop and wire it to whatever refetch mechanism your data layer provides.
+</Tip>

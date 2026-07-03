@@ -1,0 +1,320 @@
+---
+title: "TypeScript Types Reference for Weather App TS"
+sidebarTitle: "Types Reference"
+description: "Complete TypeScript type definitions used across Weather App TS, split into API response types from the Open-Meteo integration and UI component prop types."
+---
+
+Weather App TS organises its TypeScript types across two dedicated modules. `src/types/api.ts` defines the raw shapes returned by the Open-Meteo APIs — these types mirror the JSON response objects exactly and are used inside the `useWeather` and `useGeocoding` hooks. `src/types/weather.ts` defines the component-level interfaces used by the UI layer — props passed into components and the transformed data structures the app works with after normalising API responses. Keeping these two modules separate ensures that API contract changes don't leak directly into component signatures, and vice versa.
+
+## API Response Types (`src/types/api.ts`)
+
+These types map one-to-one onto the JSON objects returned by the Open-Meteo forecast and geocoding endpoints. They are used as the return types of the data-fetching hooks and as the source of truth for all downstream data transformations.
+
+### CurrentWeatherResponse
+
+Represents the `current` object in a forecast response — a single snapshot of live conditions at the requested location.
+
+<ResponseField name="time" type="string">
+  ISO 8601 datetime string of the most recent observation (e.g., `"2024-07-01T14:00"`).
+</ResponseField>
+
+<ResponseField name="interval" type="number">
+  The update interval for the current-conditions block, expressed in seconds.
+</ResponseField>
+
+<ResponseField name="temperature_2m" type="number">
+  Air temperature measured at 2 metres above ground level, in degrees Celsius.
+</ResponseField>
+
+<ResponseField name="relative_humidity_2m" type="number">
+  Relative humidity at 2 metres above ground, expressed as a percentage.
+</ResponseField>
+
+<ResponseField name="apparent_temperature" type="number">
+  Feels-like (apparent) temperature that accounts for wind chill and humidity, in degrees Celsius.
+</ResponseField>
+
+<ResponseField name="is_day" type="boolean">
+  `true` when the sun is currently above the horizon at the requested location; `false` at night. Used by the app to switch between day and night weather icons and themes.
+</ResponseField>
+
+<ResponseField name="weather_code" type="number">
+  WMO weather interpretation code describing the current sky condition (e.g., `0` = clear sky, `61` = slight rain). The app maps these codes to icon and label strings.
+</ResponseField>
+
+<ResponseField name="cloud_cover" type="number">
+  Total sky cloud cover as a percentage, from `0` (completely clear) to `100` (fully overcast).
+</ResponseField>
+
+<ResponseField name="wind_speed_10m" type="number">
+  Wind speed measured at 10 metres above ground, in kilometres per hour.
+</ResponseField>
+
+---
+
+### HourlyWeatherResponse
+
+Represents the `hourly` object in a forecast response. All fields are parallel arrays — index `i` across every array refers to the same point in time.
+
+<ResponseField name="time" type="string[]">
+  Array of ISO 8601 datetime strings, one element per hour of forecast coverage (e.g., `["2024-07-01T00:00", "2024-07-01T01:00", ...]`).
+</ResponseField>
+
+<ResponseField name="temperature_2m" type="number[]">
+  Hourly air temperature at 2 metres above ground, in degrees Celsius. Parallel to `time`.
+</ResponseField>
+
+<ResponseField name="weather_code" type="number[]">
+  Hourly WMO weather interpretation code. Parallel to `time`.
+</ResponseField>
+
+---
+
+### DailyWeatherResponse
+
+Represents the `daily` object in a forecast response. All fields are parallel arrays indexed by day across a 7-day window.
+
+<ResponseField name="time" type="string[]">
+  Array of ISO 8601 date strings in `YYYY-MM-DD` format, one element per forecast day.
+</ResponseField>
+
+<ResponseField name="weather_code" type="number[]">
+  Representative WMO weather code for the day, chosen to reflect the most significant condition. Parallel to `time`.
+</ResponseField>
+
+<ResponseField name="temperature_2m_max" type="number[]">
+  Daily maximum air temperature at 2 metres, in degrees Celsius. Parallel to `time`.
+</ResponseField>
+
+<ResponseField name="temperature_2m_min" type="number[]">
+  Daily minimum air temperature at 2 metres, in degrees Celsius. Parallel to `time`.
+</ResponseField>
+
+<ResponseField name="sunrise" type="string[]">
+  Local sunrise time for each day, represented as an ISO 8601 datetime string. Parallel to `time`.
+</ResponseField>
+
+<ResponseField name="sunset" type="string[]">
+  Local sunset time for each day, represented as an ISO 8601 datetime string. Parallel to `time`.
+</ResponseField>
+
+---
+
+### WeatherResponse
+
+The top-level object returned by the Open-Meteo forecast endpoint. This is the type the `useWeather` hook stores in state after a successful fetch.
+
+<ResponseField name="utc_offset_seconds" type="number">
+  The UTC offset for the requested location in seconds. Useful for converting UTC-based timestamps to local wall-clock time.
+</ResponseField>
+
+<ResponseField name="timezone" type="string">
+  IANA timezone identifier for the location (e.g., `"America/New_York"`). Returned when `timezone=auto` is passed to the API.
+</ResponseField>
+
+<ResponseField name="current_units" type="Record<string, string>">
+  Map of each requested current-weather variable name to its unit string. For example: `{ "temperature_2m": "°C", "wind_speed_10m": "km/h", "relative_humidity_2m": "%" }`. The app reads these values directly to render unit labels without hardcoding.
+</ResponseField>
+
+<ResponseField name="current" type="CurrentWeatherResponse">
+  The current-conditions snapshot. See [CurrentWeatherResponse](#currentweatherresponse).
+</ResponseField>
+
+<ResponseField name="hourly_units" type="Record<string, string>">
+  Map of each requested hourly variable name to its unit string.
+</ResponseField>
+
+<ResponseField name="hourly" type="HourlyWeatherResponse">
+  The hourly forecast arrays. See [HourlyWeatherResponse](#hourlyweatherresponse).
+</ResponseField>
+
+<ResponseField name="daily_units" type="Record<string, string>">
+  Map of each requested daily variable name to its unit string.
+</ResponseField>
+
+<ResponseField name="daily" type="DailyWeatherResponse">
+  The daily forecast arrays. See [DailyWeatherResponse](#dailyweatherresponse).
+</ResponseField>
+
+---
+
+### Place
+
+A single geocoding result returned inside `GeocodingResponse.results`. Carries everything needed to identify a city and call the forecast endpoint.
+
+<ResponseField name="id" type="number">
+  Stable, unique numeric identifier for the city in the Open-Meteo geocoding database. Used as a React list key when rendering search results.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  City or locality name in the requested language (e.g., `"Berlin"`).
+</ResponseField>
+
+<ResponseField name="country" type="string">
+  Full country name in the requested language (e.g., `"Deutschland"` when `language=en` still returns the native form for some locales).
+</ResponseField>
+
+<ResponseField name="country_code" type="string">
+  ISO 3166-1 alpha-2 country code for the city's country (e.g., `"DE"` for Germany). Displayed alongside the city name to disambiguate results.
+</ResponseField>
+
+<ResponseField name="latitude" type="number">
+  Decimal-degree latitude of the city centre. Passed directly to the forecast endpoint as the `latitude` query parameter.
+</ResponseField>
+
+<ResponseField name="longitude" type="number">
+  Decimal-degree longitude of the city centre. Passed directly to the forecast endpoint as the `longitude` query parameter.
+</ResponseField>
+
+---
+
+### GeocodingResponse
+
+The top-level object returned by the Open-Meteo Geocoding API. Typed and consumed directly by the `useGeocoding` hook.
+
+<ResponseField name="results" type="Place[]">
+  Ordered array of matching `Place` objects. May be empty if no cities match the search term.
+</ResponseField>
+
+<ResponseField name="generation_time" type="number">
+  Time in milliseconds the Open-Meteo server spent generating this response.
+</ResponseField>
+
+---
+
+## UI Component Types (`src/types/weather.ts`)
+
+These types are used by the React component layer. They represent transformed or extracted slices of the API data that components actually render, keeping components decoupled from the raw API shape.
+
+### WeatherVar
+
+A generic value-and-unit pair used wherever the app pairs a numeric (or string) measurement with its unit label.
+
+```typescript
+type WeatherVar = {
+  value: number | string;
+  unit?: string;
+};
+```
+
+<ResponseField name="value" type="number | string">
+  The measurement value. Most weather variables are `number`, but the type allows `string` for flexibility (e.g., pre-formatted display strings).
+</ResponseField>
+
+<ResponseField name="unit" type="string">
+  Optional unit label (e.g., `"km/h"`, `"%"`). When present, components render it alongside the value. Sourced from the `*_units` maps on `WeatherResponse`.
+</ResponseField>
+
+---
+
+### WeatherNavProps
+
+Props accepted by the `WeatherNav` component, which renders the top navigation bar showing the current city, date, time, and condition icon.
+
+<ResponseField name="city" type="string">
+  The name of the currently selected city, displayed in the nav header.
+</ResponseField>
+
+<ResponseField name="code" type="number">
+  WMO weather code for the current condition. Used to select the appropriate status icon and label.
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Formatted date string for display in the navigation bar.
+</ResponseField>
+
+<ResponseField name="hour" type="string">
+  Formatted time string (current local hour) for display in the navigation bar.
+</ResponseField>
+
+<ResponseField name="isDay" type="boolean">
+  Indicates whether the current time is daytime. Controls day/night icon variants in the nav.
+</ResponseField>
+
+---
+
+### CurrentWeather
+
+The shape of the current-conditions data object passed to the `CurrentWeather` component. Fields are normalised from `CurrentWeatherResponse` into display-ready values.
+
+<ResponseField name="temperature" type="number">
+  Current air temperature in degrees Celsius.
+</ResponseField>
+
+<ResponseField name="wind" type="WeatherVar">
+  Wind speed as a `WeatherVar` — `value` holds the numeric speed and `unit` holds the label (e.g., `"km/h"`).
+</ResponseField>
+
+<ResponseField name="humidity" type="WeatherVar">
+  Relative humidity as a `WeatherVar` — `value` holds the percentage and `unit` holds `"%"`.
+</ResponseField>
+
+<ResponseField name="apparent_temp" type="WeatherVar">
+  Feels-like temperature as a `WeatherVar` — `value` holds the numeric temperature and `unit` holds `"°C"`.
+</ResponseField>
+
+<ResponseField name="cloud_coverage" type="number">
+  Total cloud cover percentage as a plain number.
+</ResponseField>
+
+---
+
+### HourlyWeather
+
+Represents a single entry in the hourly forecast list rendered by the `HourlyWeather` component.
+
+<ResponseField name="time" type="string">
+  The formatted hour string for this entry (e.g., `"14:00"`).
+</ResponseField>
+
+<ResponseField name="code" type="number">
+  WMO weather code for this hour, used to select the appropriate icon.
+</ResponseField>
+
+<ResponseField name="temperature" type="number">
+  Air temperature at 2 metres for this hour, in degrees Celsius.
+</ResponseField>
+
+<ResponseField name="isDay" type="boolean">
+  Whether this hour falls during daylight hours. Controls day/night icon variant selection.
+</ResponseField>
+
+---
+
+### DailyWeather
+
+Represents a single entry in the daily forecast list rendered by the `DailyWeather` component.
+
+<ResponseField name="time" type="string">
+  The formatted date string for this day (e.g., `"Mon 1 Jul"`).
+</ResponseField>
+
+<ResponseField name="code" type="number">
+  WMO weather code representing the day's dominant condition.
+</ResponseField>
+
+<ResponseField name="temp_max" type="number">
+  Daily maximum temperature in degrees Celsius.
+</ResponseField>
+
+<ResponseField name="temp_min" type="number">
+  Daily minimum temperature in degrees Celsius.
+</ResponseField>
+
+---
+
+## Type Import Paths
+
+Use the following import statements to bring types into any file within the project.
+
+```typescript
+// API response types
+import type { WeatherResponse, CurrentWeatherResponse, Place, GeocodingResponse } from './types/api';
+
+// Component / UI types
+import type { CurrentWeather, HourlyWeather, DailyWeather, WeatherNavProps, WeatherVar } from './types/weather';
+```
+
+<Tip>
+  The `current_units`, `hourly_units`, and `daily_units` maps on `WeatherResponse` are a powerful way to display unit labels dynamically without hardcoding any strings. The app reads `weather.current_units.wind_speed_10m` and `weather.current_units.relative_humidity_2m` directly when constructing `WeatherVar` objects — so if the API ever changes the default unit (e.g., switching wind speed from `km/h` to `m/s`), the displayed label updates automatically with no code changes required.
+</Tip>

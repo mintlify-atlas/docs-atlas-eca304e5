@@ -1,0 +1,161 @@
+---
+title: "Open-Meteo Weather API: Forecast Endpoint Reference"
+sidebarTitle: "Weather API"
+description: "Weather App TS calls the Open-Meteo forecast endpoint to retrieve current conditions, 7-day daily forecasts, and multi-day hourly data — no API key required."
+---
+
+Weather App TS fetches all weather data from the Open-Meteo forecast endpoint. A single request returns current conditions (temperature, humidity, wind speed, cloud cover, and more), hourly forecasts for multiple days, and a 7-day daily summary including highs, lows, sunrise, and sunset times. Open-Meteo is a free, open-source weather API that requires no authentication, no API key, and no account registration — making it ideal for client-side React applications.
+
+## Endpoint
+
+The forecast endpoint accepts `GET` requests and returns a JSON payload containing all three forecast horizons in one response.
+
+```
+GET https://api.open-meteo.com/v1/forecast
+```
+
+## Query Parameters
+
+The app constructs the URL using the resolved latitude and longitude from the Geocoding API, then appends fixed variable lists for each forecast horizon.
+
+<ParamField query="latitude" type="number" required>
+  Geographic latitude of the target location, in decimal degrees (e.g., `52.52437`). Sourced from the `Place` object returned by the Geocoding API.
+</ParamField>
+
+<ParamField query="longitude" type="number" required>
+  Geographic longitude of the target location, in decimal degrees (e.g., `13.41053`). Sourced from the `Place` object returned by the Geocoding API.
+</ParamField>
+
+<ParamField query="current" type="string">
+  Comma-separated list of current-weather variables to include in the response. The app requests:
+
+  ```
+  temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,cloud_cover,wind_speed_10m
+  ```
+</ParamField>
+
+<ParamField query="hourly" type="string">
+  Comma-separated list of hourly forecast variables. The app requests:
+
+  ```
+  temperature_2m,weather_code
+  ```
+</ParamField>
+
+<ParamField query="daily" type="string">
+  Comma-separated list of daily forecast variables. The app requests:
+
+  ```
+  weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset
+  ```
+</ParamField>
+
+<ParamField query="timezone" type="string">
+  Timezone used to align returned timestamps. The app passes `auto`, which instructs Open-Meteo to use the local timezone of the requested coordinates automatically.
+</ParamField>
+
+## Full Request URL
+
+The following URL template shows the complete request the app sends, with `{latitude}` and `{longitude}` replaced at runtime by the coordinates of the selected city.
+
+```
+https://api.open-meteo.com/v1/forecast
+  ?latitude={latitude}
+  &longitude={longitude}
+  &daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset
+  &hourly=temperature_2m,weather_code
+  &current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,cloud_cover,wind_speed_10m
+  &timezone=auto
+```
+
+## Response Structure
+
+The API returns a single JSON object. The app maps this directly to the `WeatherResponse` TypeScript type defined in `src/types/api.ts`.
+
+```typescript
+type WeatherResponse = {
+  utc_offset_seconds: number;               // UTC offset for the location
+  timezone: string;                         // IANA timezone string
+  current_units: Record<string, string>;    // unit labels for current fields
+  current: CurrentWeatherResponse;
+  hourly_units: Record<string, string>;     // unit labels for hourly fields
+  hourly: HourlyWeatherResponse;
+  daily_units: Record<string, string>;      // unit labels for daily fields
+  daily: DailyWeatherResponse;
+};
+```
+
+<ResponseField name="utc_offset_seconds" type="number">
+  The UTC offset of the requested location in seconds. Used to convert UTC timestamps to local time.
+</ResponseField>
+
+<ResponseField name="timezone" type="string">
+  The IANA timezone identifier for the location (e.g., `"Europe/Berlin"`). Returned when `timezone=auto` is set.
+</ResponseField>
+
+<ResponseField name="current_units" type="Record<string, string>">
+  A map of each requested current-weather variable name to its unit string (e.g., `{ "temperature_2m": "°C", "wind_speed_10m": "km/h" }`). The app reads these directly to display unit labels without hardcoding.
+</ResponseField>
+
+<ResponseField name="current" type="CurrentWeatherResponse">
+  Object containing the latest observed weather values. See [Current Weather Fields](#current-weather-fields) below.
+</ResponseField>
+
+<ResponseField name="hourly_units" type="Record<string, string>">
+  A map of each requested hourly variable name to its unit string.
+</ResponseField>
+
+<ResponseField name="hourly" type="HourlyWeatherResponse">
+  Object containing parallel arrays of hourly forecast values. See [Hourly Weather Fields](#hourly-weather-fields) below.
+</ResponseField>
+
+<ResponseField name="daily_units" type="Record<string, string>">
+  A map of each requested daily variable name to its unit string.
+</ResponseField>
+
+<ResponseField name="daily" type="DailyWeatherResponse">
+  Object containing parallel arrays of daily forecast values. See [Daily Weather Fields](#daily-weather-fields) below.
+</ResponseField>
+
+## Current Weather Fields
+
+The `current` object holds a single snapshot of current conditions at the requested location. Every field corresponds to one of the variable names passed in the `current` query parameter.
+
+| Field | Type | Description |
+|---|---|---|
+| `time` | `string` | ISO 8601 datetime string of the most recent observation |
+| `interval` | `number` | Update interval for the current data, in seconds |
+| `temperature_2m` | `number` | Air temperature measured at 2 metres above ground (°C) |
+| `relative_humidity_2m` | `number` | Relative humidity at 2 metres above ground (%) |
+| `apparent_temperature` | `number` | Feels-like (apparent) temperature accounting for wind and humidity (°C) |
+| `is_day` | `boolean` | `true` if the sun is currently above the horizon at the location |
+| `weather_code` | `number` | WMO weather interpretation code describing the current condition |
+| `cloud_cover` | `number` | Total sky cloud cover as a percentage (%) |
+| `wind_speed_10m` | `number` | Wind speed at 10 metres above ground (km/h) |
+
+## Hourly Weather Fields
+
+The `hourly` object uses parallel arrays — each index across all arrays corresponds to the same point in time. The arrays cover multiple days of hourly data starting from the current hour.
+
+| Field | Type | Description |
+|---|---|---|
+| `time` | `string[]` | Array of ISO 8601 datetime strings, one entry per hour |
+| `temperature_2m` | `number[]` | Hourly air temperature at 2 metres above ground (°C) |
+| `weather_code` | `number[]` | Hourly WMO weather interpretation code |
+
+## Daily Weather Fields
+
+The `daily` object also uses parallel arrays indexed by day. The app renders 7 days of daily forecast data from these arrays.
+
+| Field | Type | Description |
+|---|---|---|
+| `time` | `string[]` | Array of ISO 8601 date strings in `YYYY-MM-DD` format, one per day |
+| `weather_code` | `number[]` | Representative WMO weather code for the day |
+| `temperature_2m_max` | `number[]` | Daily maximum temperature at 2 metres (°C) |
+| `temperature_2m_min` | `number[]` | Daily minimum temperature at 2 metres (°C) |
+| `sunrise` | `string[]` | Local sunrise time for each day as an ISO 8601 datetime string |
+| `sunset` | `string[]` | Local sunset time for each day as an ISO 8601 datetime string |
+
+<Note>
+  No API key or authentication header is required to call this endpoint. Open-Meteo is a free, open-source weather API — requests can be made directly from the browser without any credentials or proxy layer.
+</Note>

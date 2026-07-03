@@ -1,0 +1,74 @@
+---
+title: "useWeather: Fetch Live Forecast Data by Coordinates"
+sidebarTitle: "useWeather"
+description: "useWeather is a custom React hook that fetches current conditions, hourly, and daily forecast data from the Open-Meteo API given latitude and longitude."
+---
+
+`useWeather` is a custom React hook that retrieves live weather data from the [Open-Meteo Forecast API](https://open-meteo.com/) for a given geographic location. It returns current conditions (temperature, humidity, wind speed, cloud cover, and day/night status), an hourly temperature and weather-code series, and a daily summary covering high/low temperatures, weather codes, and sunrise/sunset times. When either coordinate is `null` the hook is dormant — it sets `loading` to `false` and waits until valid coordinates are supplied before making any network request.
+
+## Signature
+
+```typescript
+function useWeather({ latitude, longitude }: {
+  latitude: number | null;
+  longitude: number | null;
+}): {
+  weather: WeatherResponse | null;
+  loading: boolean;
+  error: string | null;
+}
+```
+
+## Parameters
+
+<ParamField path="latitude" type="number | null" required>
+  Geographic latitude of the target location in decimal degrees. Pass `null` to suspend fetching — the hook will not make any API call until a non-null value is provided.
+</ParamField>
+
+<ParamField path="longitude" type="number | null" required>
+  Geographic longitude of the target location in decimal degrees. Pass `null` to suspend fetching — the hook will not make any API call until a non-null value is provided.
+</ParamField>
+
+## Return Value
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `weather` | `WeatherResponse \| null` | Full API response object, or `null` before the first successful fetch |
+| `loading` | `boolean` | `true` while the fetch is in progress |
+| `error` | `string \| null` | Error message if the request failed, or `null` on success |
+
+## API Endpoint
+
+`useWeather` calls the Open-Meteo Forecast API with the following URL template:
+
+```
+https://api.open-meteo.com/v1/forecast
+  ?latitude={latitude}
+  &longitude={longitude}
+  &daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset
+  &hourly=temperature_2m,weather_code
+  &current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,cloud_cover,wind_speed_10m
+  &timezone=auto
+```
+
+The `timezone=auto` parameter instructs the API to return all timestamps in the local timezone of the requested location, so sunrise, sunset, and hourly times are always meaningful to the end user without any client-side conversion.
+
+## Usage Example
+
+The following pattern is used inside `WeatherContext`. A `useMemo` call derives a stable coordinate object from the selected city so that the hook only re-fetches when the city actually changes:
+
+```typescript
+const coords = useMemo(
+  () => ({
+    latitude: selectedCity?.latitude ?? null,
+    longitude: selectedCity?.longitude ?? null
+  }),
+  [selectedCity]
+);
+
+const { weather, loading, error } = useWeather(coords);
+```
+
+<Note>
+  `useWeather` places `latitude` and `longitude` in its `useEffect` dependency array, so it automatically re-fetches whenever either coordinate changes. Selecting a new city updates both values simultaneously, triggering a single fresh request for the new location.
+</Note>

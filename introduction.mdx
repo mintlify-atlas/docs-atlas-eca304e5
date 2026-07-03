@@ -1,0 +1,76 @@
+---
+title: "Weather App TS: A Real-Time Global Weather Application"
+sidebarTitle: "Introduction"
+description: "Weather App TS fetches live weather for any city worldwide using Open-Meteo. Built with React 19, TypeScript 6, Tailwind CSS 4, and Vite — no API key required."
+---
+
+Weather App TS is a full-featured, client-side weather dashboard that delivers real-time conditions and multi-day forecasts for any city on the planet — no API key, no backend, no sign-up required. The application queries the [Open-Meteo Weather API](https://open-meteo.com/) and the [Open-Meteo Geocoding API](https://open-meteo.com/en/docs/geocoding-api) directly from the browser, processes the responses through a strongly-typed React Context layer, and renders a responsive, adaptive UI built entirely with Tailwind CSS utility classes. React 19 keeps the rendering model predictable, TypeScript 6 catches integration errors at compile time, and Vite 8 delivers near-instant hot module replacement during development — together forming a stack that is both fast to iterate on and easy to extend.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Global City Search" icon="magnifying-glass">
+    Debounced autocomplete powered by the Open-Meteo Geocoding API lets users find any city worldwide with minimal keystrokes and no redundant network requests.
+  </Card>
+  <Card title="Current Weather Conditions" icon="cloud-sun">
+    Displays temperature, feels-like temperature, relative humidity, wind speed, and cloud coverage percentage — all sourced from the Open-Meteo current weather endpoint.
+  </Card>
+  <Card title="Hourly Forecast" icon="clock">
+    Shows the next 7 hours of weather from the current time, with per-hour temperature readings and WMO weather codes resolved to descriptive icons.
+  </Card>
+  <Card title="7-Day Daily Forecast" icon="calendar-days">
+    Presents a full week of daily forecasts including high and low temperatures and a weather-code icon for each day at a glance.
+  </Card>
+  <Card title="Dynamic Day/Night Theme" icon="moon">
+    Background colors and icon variants automatically switch between day and night modes based on the actual sunrise and sunset times returned for the selected location.
+  </Card>
+  <Card title="Persistent City Preference" icon="floppy-disk">
+    The last-selected city is serialized to `localStorage` so the dashboard restores the correct location on every revisit — no re-search required.
+  </Card>
+  <Card title="WMO Code Icons" icon="image">
+    Every WMO weather code is mapped to a human-readable label and a corresponding [Lucide React](https://lucide.dev/) icon, providing consistent visual language across current, hourly, and daily panels.
+  </Card>
+  <Card title="Fully Typed with TypeScript" icon="code">
+    All API response shapes, context values, component props, and utility return types are defined in dedicated `.ts` type files, giving full IntelliSense coverage and compile-time safety.
+  </Card>
+</CardGroup>
+
+## Tech Stack
+
+The table below lists every production-relevant dependency with the version range declared in `package.json` and the specific role it plays in the application.
+
+| Technology | Version | Role |
+|---|---|---|
+| React | ^19.2.6 | UI component model and concurrent rendering |
+| TypeScript | ~6.0.2 | Static typing, improved DX, compile-time error detection |
+| Tailwind CSS | ^4.3.0 | Utility-first CSS, responsive layout, theme tokens |
+| Vite | ^8.0.12 | Development server, HMR, and production bundler |
+| Lucide React | ^1.16.0 | Consistent SVG icon set for weather codes and UI controls |
+| use-debounce | ^10.1.1 | Debounced search input to throttle geocoding API calls |
+
+## Project Structure
+
+The `src/` directory is organized into five focused folders, each with a single responsibility. This separation keeps the codebase navigable as it grows and makes it straightforward to add new features — such as additional forecast panels or a new data source — without touching unrelated code.
+
+```bash
+src/
+├── components/   # Reusable UI components (CurrentWeather, HourlyWeather, DailyWeather, WeatherNav, WeatherStatus)
+│
+├── context/      # Global weather state management via React Context (WeatherContext.tsx)
+│
+├── hooks/        # Custom React hooks for data fetching and theming (useWeather, useGeocoding, useWeatherTheme)
+│
+├── types/        # Shared TypeScript type definitions for API responses and domain models
+│
+└── utils/        # Pure utility functions (formatDate, isDayTime, weatherCodes, cloudCoverage)
+```
+
+## Live Demo
+
+<Note>
+  A production build of Weather App TS is deployed on Vercel and available right now — no installation needed. Visit [https://weather-app-ts-wheat.vercel.app/](https://weather-app-ts-wheat.vercel.app/) to try the live application.
+</Note>
+
+## License
+
+Weather App TS is open-source software released under the **MIT License**. You are free to use, modify, and distribute the project for both personal and commercial purposes, provided the original license notice is retained.

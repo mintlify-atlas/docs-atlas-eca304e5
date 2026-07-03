@@ -1,0 +1,80 @@
+---
+title: "useGeocoding: Search Cities via Open-Meteo Geocoding"
+sidebarTitle: "useGeocoding"
+description: "useGeocoding is a custom React hook that queries the Open-Meteo Geocoding API by city name and returns a list of matching Place results."
+---
+
+`useGeocoding` is a custom React hook that queries the [Open-Meteo Geocoding API](https://open-meteo.com/en/docs/geocoding-api) with a city name string and returns up to ten matching `Place` results, each containing the city's coordinates, country, and country code. The hook fires a new request on every change to the `city` argument — debouncing is the caller's responsibility and is typically handled upstream (for example, with a 300 ms `useDebounce` wrapper) to avoid hammering the API on every keystroke.
+
+## Signature
+
+```typescript
+function useGeocoding(city: string): {
+  cities: GeocodingResponse | null;
+  loading: boolean;
+  error: string | null;
+}
+```
+
+## Parameters
+
+<ParamField path="city" type="string" required>
+  The city name search term to pass to the geocoding API. An empty string still triggers a fetch, so callers should guard against empty or very short inputs before invoking the hook — see the tip below.
+</ParamField>
+
+## Return Value
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cities` | `GeocodingResponse \| null` | Search results containing up to 10 matching cities, or `null` before the first fetch |
+| `loading` | `boolean` | `true` while the fetch is in progress |
+| `error` | `string \| null` | Error message on failure, or `null` on success |
+
+## API Endpoint
+
+`useGeocoding` calls the Open-Meteo Geocoding API with the following URL template:
+
+```
+https://geocoding-api.open-meteo.com/v1/search
+  ?name={city}
+  &count=10
+  &language=en
+  &format=json
+```
+
+The `count=10` parameter caps results at ten entries, and `language=en` ensures that place name variants are returned in English.
+
+## GeocodingResponse Shape
+
+The hook types its response using the following structures:
+
+```typescript
+type GeocodingResponse = {
+  results: Place[];
+  generation_time: number;
+};
+
+type Place = {
+  id: number;
+  name: string;
+  country: string;
+  country_code: string;
+  latitude: number;
+  longitude: number;
+};
+```
+
+Each `Place` in `results` provides the `latitude` and `longitude` values that are passed directly to `useWeather` once the user selects a city from the search dropdown.
+
+## Usage in WeatherContext
+
+In `WeatherContext`, the raw search string is debounced for 300 ms before being forwarded to `useGeocoding`. This prevents a new API call from firing on every keystroke while the user is still typing:
+
+```typescript
+const [debouncedSearch] = useDebounce(search, 300);
+const { cities } = useGeocoding(debouncedSearch);
+```
+
+<Tip>
+  Enforce a minimum of **2 characters** before passing the search term to `useGeocoding` — this matches the `minLength={2}` attribute on the search input and prevents noisy, low-value results for single-character queries. You can guard this with a simple conditional or by passing an empty string to the hook when the input is too short.
+</Tip>

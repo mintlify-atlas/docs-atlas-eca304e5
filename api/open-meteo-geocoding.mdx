@@ -1,0 +1,107 @@
+---
+title: "Open-Meteo Geocoding API: City Search Reference"
+sidebarTitle: "Geocoding API"
+description: "Weather App TS uses the Open-Meteo Geocoding API to convert city name search terms into Place objects with coordinates, country code, and a unique city ID."
+---
+
+Before the app can fetch weather data, it needs the latitude and longitude of the user's chosen city. The Open-Meteo Geocoding API handles this conversion: it accepts a plain-text city name and returns a ranked list of matching places, each carrying the coordinates, country information, and a stable numeric ID needed to drive the forecast request. This lookup happens inside the `useGeocoding` hook every time the user types a new search term in the WeatherNav input.
+
+## Endpoint
+
+The geocoding endpoint accepts `GET` requests and returns results as JSON.
+
+```
+GET https://geocoding-api.open-meteo.com/v1/search
+```
+
+## Query Parameters
+
+The app sends four parameters with every geocoding request — the city name typed by the user plus three fixed configuration values.
+
+<ParamField query="name" type="string" required>
+  The city name search term entered by the user (e.g., `"Berlin"` or `"New York"`). The WeatherNav input enforces `minLength={2}`, so this value is always at least two characters before a request is fired.
+</ParamField>
+
+<ParamField query="count" type="number">
+  Maximum number of city results to return. The app always passes `10`, giving users enough options to disambiguate cities with the same name in different countries.
+</ParamField>
+
+<ParamField query="language" type="string">
+  Language code for result names and country labels. The app passes `en` to receive English-language place names regardless of the user's browser locale.
+</ParamField>
+
+<ParamField query="format" type="string">
+  Response serialisation format. The app passes `json` to receive a standard JSON body.
+</ParamField>
+
+## Full Request URL
+
+The following URL template shows the complete request the app sends, with `{city}` replaced at runtime by the debounced search term from the WeatherNav input.
+
+```
+https://geocoding-api.open-meteo.com/v1/search
+  ?name={city}
+  &count=10
+  &language=en
+  &format=json
+```
+
+## Response Structure
+
+A successful response is a single JSON object typed as `GeocodingResponse` in `src/types/api.ts`.
+
+```typescript
+type GeocodingResponse = {
+  results: Place[];       // Ordered list of matching places
+  generation_time: number; // API generation time in ms
+};
+```
+
+<ResponseField name="results" type="Place[]">
+  An ordered array of `Place` objects matching the search term. Results are ranked by relevance. The array may be empty if no cities match the query. See [Place Object](#place-object) below for the shape of each entry.
+</ResponseField>
+
+<ResponseField name="generation_time" type="number">
+  The time in milliseconds the Open-Meteo server took to generate this response. Useful for debugging latency.
+</ResponseField>
+
+## Place Object
+
+Each entry in `results` is a `Place` object containing everything the app needs to identify the city and call the forecast endpoint.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `number` | Stable, unique numeric identifier for the city in the Open-Meteo database |
+| `name` | `string` | City or locality name in the requested language |
+| `country` | `string` | Full country name in the requested language (e.g., `"Deutschland"`) |
+| `country_code` | `string` | ISO 3166-1 alpha-2 country code for the city's country (e.g., `"DE"`) |
+| `latitude` | `number` | Decimal-degree latitude of the city centre |
+| `longitude` | `number` | Decimal-degree longitude of the city centre |
+
+## Example Response
+
+The following is a representative response for a search of `"Berlin"`.
+
+```json
+{
+  "results": [
+    {
+      "id": 2950159,
+      "name": "Berlin",
+      "country": "Deutschland",
+      "country_code": "DE",
+      "latitude": 52.52437,
+      "longitude": 13.41053
+    }
+  ],
+  "generation_time": 0.48
+}
+```
+
+## Debounce Integration
+
+To avoid firing a geocoding request on every keystroke, the app debounces the WeatherNav search input by 300 milliseconds before passing the value to `useGeocoding`. This means the API is only called once the user pauses typing, keeping network usage low and the result list stable. In addition, the WeatherNav search input enforces `minLength={2}`, which prevents the hook from sending empty or single-character queries that would produce noisy or unhelpful result sets.
+
+<Note>
+  The Geocoding API is also completely free with no authentication required. Like the forecast endpoint, requests can be made directly from the browser with no API key, token, or proxy needed.
+</Note>

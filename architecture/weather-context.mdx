@@ -1,0 +1,148 @@
+---
+title: "WeatherContext: Global State Management in Weather App TS"
+sidebarTitle: "Weather Context"
+description: "WeatherContext wires together city selection, geocoding, weather fetching, and hourly/daily data transformation using React Context and custom hooks."
+---
+
+`WeatherContext` is the central nervous system of Weather App TS. It owns every piece of shared state the application needs: the search input string, the list of geocoded city candidates, the currently selected city, the raw weather API response, and the transformed hourly and daily forecast arrays that components consume directly. Rather than threading props through multiple component layers, any component in the tree can call `useWeatherContext()` to read or update this state. The context is created in `src/context/WeatherContext.tsx` and exposed through a `WeatherProvider` wrapper component that is mounted at the application root in `main.tsx`.
+
+## Context Shape
+
+`WeatherContextType` defines every field available to consumers. The table below describes each field, its TypeScript type, and its purpose.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `search` | `string` | Current value of the city search input |
+| `setSearch` | `Dispatch<SetStateAction<string>>` | Updates the search input string |
+| `cities` | `GeocodingResponse \| null` | Geocoding API results for the current debounced search term |
+| `selectedCity` | `Place \| null` | The city whose forecast is currently displayed |
+| `handleSelect` | `(city: Place) => void` | Selects a city, updating state and persisting to localStorage |
+| `weather` | `WeatherResponse \| null` | Full raw response from the Open-Meteo forecast API |
+| `hourlyWeather` | `HourlyWeather[]` | Transformed hourly forecast starting from the current hour (7 entries) |
+| `dailyWeather` | `DailyWeather[]` | Transformed 7-day forecast mapped from the daily API data |
+| `currentWeather` | `CurrentWeatherResponse \| null` | Current conditions extracted from `weather.current` |
+| `loading` | `boolean` | `true` while the weather fetch is in progress |
+| `error` | `string \| null` | Error message string if the weather fetch fails, otherwise `null` |
+
+## Default City
+
+When `localStorage` contains no stored city, the context initialises `selectedCity` to the following constant:
+
+```typescript
+const DEFAULT_CITY: Place = {
+    id: 2950159,
+    name: 'Berlin',
+    latitude: 52.52437,
+    longitude: 13.41053,
+    country_code: 'DE',
+    country: 'Deutschland'
+};
+```
+
+Berlin is used as the fallback so the application always has a valid set of coordinates to fetch on first load. The `useState` initialiser wraps the `localStorage` read in a `try/catch` so a corrupted stored value also falls back cleanly to `DEFAULT_CITY`.
+
+## Using the Context
+
+Import `useWeatherContext` and destructure the fields your component needs. The hook is a thin wrapper around `useContext` that also enforces the provider boundary at runtime.
+
+```typescript
+import { useWeatherContext } from '../context/WeatherContext';
+
+function MyComponent() {
+  const { currentWeather, loading, error } = useWeatherContext();
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error}</p>;
+
+  return <p>Temperature: {currentWeather?.temperature_2m}°C</p>;
+}
+```
+
+<Warning>
+  `useWeatherContext()` throws the error `"useWeatherContext must be used within a WeatherProvider"` if it is called in a component that is not a descendant of `<WeatherProvider>`.
+</Warning>
+
+## Data Transformation
+
+Raw API arrays are long — the Open-Meteo forecast endpoint returns 168 hourly entries and 7–16 daily entries depending on the requested range. Two `useMemo` calls inside `WeatherProvider` slice and reshape this data into the exact structures that `HourlyWeather` and `DailyWeather` expect.
+
+**Hourly weather** is computed by finding the index of the current hour within `weather.hourly.time`, then mapping the parallel arrays into typed objects and taking a 7-entry slice from that index forward. Each object also receives an `isDay` boolean computed by the `isDayTime` utility, which compares the entry's timestamp against the daily sunrise and sunset arrays:
+
+```typescript
+const hourlyWeather = useMemo(() => {
+    if (!weather) return [];
+
+    const currentHour = weather.current.time.slice(0, 13);
+
+    const startIndex = weather.hourly.time.findIndex(time => time.slice(0, 13) === currentHour);
+
+    return weather.hourly.time.map((time, index) => ({
+        time,
+        code: weather.hourly.weather_code[index],
+        temperature: weather.hourly.temperature_2m[index],
+        isDay: isDayTime(time, weather.daily.sunrise, weather.daily.sunset)
+    })).slice(startIndex, startIndex + 7);
+}, [weather]);
+```
+
+**Daily weather** is computed by zipping the parallel daily arrays into typed objects, then filtering to the first seven entries:
+
+```typescript
+const dailyWeather = useMemo(() => {
+    if (!weather) return [];
+
+    return weather.daily.time.map((time, index) => ({
+        time,
+        code: weather.daily.weather_code[index],
+        temp_max: weather.daily.temperature_2m_max[index],
+        temp_min: weather.daily.temperature_2m_min[index],
+    })).filter((_, index: number) => index < 7)
+}, [weather]);
+```
+
+Both memos re-run only when `weather` changes, keeping derived state in sync with the source of truth without redundant recalculation.
+
+## City Persistence
+
+On mount, the `selectedCity` state initialiser reads from `localStorage`:
+
+```typescript
+const [selectedCity, setSelectedCity] = useState<Place | null>(() => {
+    try {
+        const stored = localStorage.getItem('selectedCity');
+        return stored ? JSON.parse(stored) : DEFAULT_CITY;
+    } catch(error) {
+        return DEFAULT_CITY;
+    }
+});
+```
+
+The `try/catch` ensures that if `JSON.parse` throws — for example because a previous version of the app stored an incompatible value — the app still starts successfully on Berlin rather than crashing. Whenever `selectedCity` changes, a separate `useEffect` serialises the new value back to `localStorage`:
+
+```typescript
+useEffect(() => {
+    if (selectedCity) {
+        localStorage.setItem('selectedCity', JSON.stringify(selectedCity));
+    }
+}, [selectedCity]);
+```
+
+This keeps the stored value in sync with the UI selection automatically, with no manual save step required from the user.
+
+## Wrapping the App
+
+`WeatherProvider` is mounted in `main.tsx` so that the context is available to `App` and every component beneath it from the very first render:
+
+```tsx
+import { WeatherProvider } from './context/WeatherContext';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <WeatherProvider>
+      <App />
+    </WeatherProvider>
+  </StrictMode>
+);
+```
+
+Placing the provider at the root means there is no component in the tree that cannot access weather state — including any future components added anywhere in the hierarchy.

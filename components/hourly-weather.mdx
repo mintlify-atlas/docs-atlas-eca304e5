@@ -1,0 +1,66 @@
+---
+title: "HourlyWeather: Next 7-Hour Forecast Component"
+sidebarTitle: "HourlyWeather"
+description: "HourlyWeather renders a horizontal scrollable row of forecast cards covering the next 7 hours from now, each showing time, weather icon, and temperature."
+---
+
+`HourlyWeather` displays a short-range, hour-by-hour forecast for the next seven hours starting from the current local hour. It sits at the top of the right column in the app's two-column layout, immediately above the seven-day `DailyWeather` panel. Each entry is represented as a compact vertical card showing the hour label, a weather condition icon, and a floored temperature value. The cards are arranged in a responsive CSS grid that fills the available width and wraps gracefully on narrow viewports.
+
+The data that drives this component is the `hourlyWeather` array exposed by `WeatherContext`. The context builds this array from the Open-Meteo hourly forecast response by finding the index that matches the current hour in the API's time list, then slicing out seven consecutive entries starting from that index.
+
+## Props
+
+<ParamField path="weatherList" type="HourlyWeather[]" required>
+  An array of up to seven hourly forecast items. Each item in the array conforms to the `HourlyWeather` type defined in `src/types/weather.ts`.
+</ParamField>
+
+### HourlyWeather Item Shape
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `time` | `string` | ISO datetime string in the format `YYYY-MM-DDTHH:MM` representing the forecast hour |
+| `code` | `number` | WMO weather interpretation code used to select the correct icon and its accessible label |
+| `temperature` | `number` | Forecasted temperature in °C for this hour. `Math.floor()` is applied before rendering |
+| `isDay` | `boolean` | Whether this hour falls within the sunrise-to-sunset window for the selected location |
+
+## HourlyCard Sub-component
+
+`HourlyCard` is an internal sub-component defined inside `HourlyWeather.tsx`. It renders one forecast tile and is not exported.
+
+<ParamField path="time" type="string" default="'00:00'">
+  The label displayed at the top of the card. At the `HourlyWeather` level, the first item in the list receives the hardcoded string `"Now"` rather than a formatted time string. All subsequent items receive the `hourOnly` slice from `formatDate`.
+</ParamField>
+
+<ParamField path="code" type="number" default="0">
+  The WMO weather code passed to `getWeatherIcon(code, isDay)`. This function looks up the code in the `weatherCodes` record and returns the appropriate Lucide icon component and its human-readable label. The label is applied as the card's `title` attribute for accessibility.
+</ParamField>
+
+<ParamField path="temperature" type="number" default="0">
+  The temperature for this hour in °C, rendered with a degree symbol appended. `Math.floor()` is applied by the parent `HourlyWeather` component before passing the value to `HourlyCard`.
+</ParamField>
+
+<ParamField path="isDay" type="boolean" default="true">
+  Passed to `getWeatherIcon` to select day or night icon variants. For example, WMO code `0` (clear sky) resolves to `Sun` when `isDay` is `true` and `Moon` when `isDay` is `false`. Daytime status for each hour is computed in `WeatherContext` using the `isDayTime` utility with the day's sunrise and sunset times.
+</ParamField>
+
+## "Now" Label
+
+The component maps over `weatherList` with an index. The very first card (index `0`) always represents the current hour, so its time label is replaced with the string `"Now"` to make it immediately recognizable:
+
+```tsx
+time={index === 0 ? "Now" : formatDate(item.time).hourOnly}
+```
+
+`formatDate(item.time).hourOnly` extracts the `HH:MM` portion of the ISO datetime string by slicing characters 0–4 from the time segment. For all entries after the first, this produces values like `"15:00"` or `"08:00"`.
+
+## Usage Example
+
+`App.tsx` passes the `hourlyWeather` array from context directly to the component:
+
+```tsx
+<HourlyWeather weatherList={hourlyWeather} />
+```
+
+<Note>
+  `hourlyWeather` in `WeatherContext` is already pre-sliced to exactly seven entries starting from the current hour. The slicing logic lives in the `useMemo` inside `WeatherProvider`, which finds the matching index in `weather.hourly.time` and calls `.slice(startIndex, startIndex + 7)`. `HourlyWeather` itself performs no slicing — it renders every item it receives. Passing the full hourly array would render all available forecast hours.
+</Note>
